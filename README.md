@@ -21,3 +21,29 @@ Our sales / presales can input a few key workload metrics of the customer:
 ## Status
 
 Current phrase: exploration.
+
+## Getting Started
+
+Prerequisites:
+
+- Node.js >= 22
+- pnpm >= 9 (`npm i -g pnpm`)
+
+Bootstrap and run locally:
+
+```bash
+pnpm i
+pnpm dev
+```
+
+Run unit tests (pricing engine):
+
+```bash
+pnpm test
+```
+
+Notes:
+
+- This app uses Vite + React + TypeScript with Tailwind for styling.
+- The core pricing math lives in `src/lib/pricing/calc.ts` and is designed to be framework-agnostic and unit tested.
+- The minimal UI in `src/app.tsx` lets you tweak inputs and see live results for Starter (Serverless) and Essential totals.

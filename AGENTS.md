@@ -11,7 +11,7 @@ Authoritative guide for contributors and AI agents working on this repository. I
 ## Tech Stack
 
 - App: Vite + React + TypeScript
-- Package manager: pnpm
+- Package manager: pnpm, use as much as pnpm instead of npm
 - UI: Tailwind CSS + shadcn/ui (Radix Primitives)
 - Forms & validation: react-hook-form + zod
 - State: local component state first; lightweight store (Zustand) if needed
