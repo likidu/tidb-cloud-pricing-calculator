@@ -1,8 +1,14 @@
+export type QpsPattern = 'sine' | 'flat'
+
 export interface PricingInputs {
+  qpsPattern: QpsPattern
   mysqlDataDirGB: number
   compressionRatio: number // compressed/original (0-1]
+  // For sine-like pattern
   vcpuBaseline: number
   vcpuPeak: number
+  // For flat pattern
+  vcpuAverage?: number
   rcuPerVcpu: number
   baselineWorkloadPct: number // 0-1
 
@@ -34,4 +40,3 @@ export interface PricingResult {
   starter: StarterPricing
   essential: EssentialPricing
 }
-

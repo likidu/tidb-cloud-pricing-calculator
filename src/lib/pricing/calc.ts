@@ -2,16 +2,18 @@ import type { PricingInputs, PricingResult } from './model'
 
 // defaults chosen as reasonable placeholders; adjust in UI
 export const defaultInputs: PricingInputs = {
+  qpsPattern: 'sine',
   mysqlDataDirGB: 500, // GB
   compressionRatio: 0.5, // 50%
   vcpuBaseline: 8,
   vcpuPeak: 32,
-  rcuPerVcpu: 100, // RCU per vCPU
-  baselineWorkloadPct: 0.6, // 60% at baseline
+  vcpuAverage: 16,
+  rcuPerVcpu: 3000, // RCU per vCPU
+  baselineWorkloadPct: 0.75,
 
-  storagePricePerGBMonth: 0.1, // $/GB-month
-  millionRuPrice: 1.2, // $/1M RU (starter)
-  rcuPrice: 0.08, // $/RCU-month (essential)
+  storagePricePerGBMonth: 0.24,
+  millionRuPrice: 0.12,
+  rcuPrice: 0.24,
 }
 
 const SECONDS_PER_HOUR = 3600
@@ -24,13 +26,18 @@ export function calculatePricing(input: PricingInputs): PricingResult {
 
   const meteringStorageGB = safeMax(0, input.mysqlDataDirGB / 3 / compression)
 
-  const peakRCU = safeMax(0, input.vcpuPeak * input.rcuPerVcpu)
-  const baselineRCU = safeMax(0, input.vcpuBaseline * input.rcuPerVcpu)
-  const amplitude = safeMax(0, peakRCU - baselineRCU)
-
-  // Use percentage of NON-baseline portion for the amplitude contribution.
-  const nonBaselinePct = 1 - baselinePct
-  const avgConsumedRcu = baselineRCU + nonBaselinePct * amplitude * TWO_OVER_PI
+  let avgConsumedRcu = 0
+  if (input.qpsPattern === 'flat') {
+    const avgVcpu = safeMax(0, input.vcpuAverage ?? 0)
+    avgConsumedRcu = avgVcpu * input.rcuPerVcpu
+  } else {
+    const peakRCU = safeMax(0, input.vcpuPeak * input.rcuPerVcpu)
+    const baselineRCU = safeMax(0, input.vcpuBaseline * input.rcuPerVcpu)
+    const amplitude = safeMax(0, peakRCU - baselineRCU)
+    // Use percentage of NON-baseline portion for the amplitude contribution.
+    const nonBaselinePct = 1 - baselinePct
+    avgConsumedRcu = baselineRCU + nonBaselinePct * amplitude * TWO_OVER_PI
+  }
 
   // Starter (Serverless)
   const storagePriceStarter = meteringStorageGB * input.storagePricePerGBMonth
@@ -84,4 +91,3 @@ function round(n: number, digits: number) {
 }
 
 export type { PricingInputs }
-
