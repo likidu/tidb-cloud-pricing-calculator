@@ -208,6 +208,7 @@ Edge cases to handle:
 - Region and plan selectors; discount input (percent).
 - Support compare scenarios (A vs. B) in a later milestone.
 - Accessible components (labels, roles, focus states, keyboard nav).
+- Prefer native shadcn/ui components for controls (inputs, selects, buttons, cards). Avoid browser-native selects; use shadcn/ui Select (Radix) and match trigger height to Input (h-10).
 
 ## State & Forms
 
@@ -274,6 +275,9 @@ pnpm test -t pricing # filter by name
 - When adding components, prefer `pnpm dlx shadcn-ui add <component>` to keep style consistency.
 - Keep `src/lib/pricing` free of React/DOM imports for testability.
 - If adding dependencies, prefer lightweight, tree-shakable packages; avoid network-bound code.
+- Default to native shadcn/ui components instead of raw HTML controls unless explicitly requested otherwise.
+- For selects specifically, use shadcn/ui `Select` (Radix) rather than the browser default. Keep the Select trigger height consistent with `Input` (`h-10`) and reuse the same focus ring styles.
+- When a needed component is missing, either scaffold it via `pnpm dlx shadcn-ui add <component>` or build it on top of `@radix-ui/*` primitives following shadcn/ui patterns. Keep custom CSS minimal and rely on Tailwind tokens.
 
 ## Troubleshooting
 

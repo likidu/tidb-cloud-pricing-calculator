@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react'
-import {
-  calculatePricing,
-  defaultInputs,
-  type PricingInputs,
-} from './lib/pricing/calc'
+import { calculatePricing, defaultInputs, type PricingInputs } from './lib/pricing/calc'
 import { formatCurrency } from './lib/utils/format'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './components/ui/select'
+import { Input } from './components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 
 function NumberInput({
   label,
@@ -22,10 +27,9 @@ function NumberInput({
   return (
     <label className='flex flex-col gap-1'>
       <span className='text-sm text-gray-700'>{label}</span>
-      <input
+      <Input
         type='number'
-        className='border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring'
-        value={Number.isFinite(value) ? value : ''}
+        value={Number.isFinite(value) ? value : ('' as unknown as number)}
         step={step}
         min={min}
         onChange={e => onChange(parseFloat(e.target.value))}
@@ -49,25 +53,51 @@ export default function App() {
           Based on current RU model assumptions (see ARCHITECTURE.md).
         </p>
 
-        <div className='grid gap-4 bg-white rounded border p-4'>
-          <h2 className='font-medium'>Workload Inputs</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Migration Source</CardTitle>
+          </CardHeader>
+          <CardContent className='grid gap-4'>
+            <Select
+              value={inputs.migrationSource}
+              onValueChange={v =>
+                setInputs(s => ({ ...s, migrationSource: v as PricingInputs['migrationSource'] }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder='Select migration source' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='mysql'>MySQL (RDS)</SelectItem>
+                <SelectItem value='tidb71'>TiDB 7.1+</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Workload Inputs</CardTitle>
+          </CardHeader>
+          <CardContent className='grid gap-4'>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4 items-center'>
-            <label className='flex flex-col gap-1'>
+            <div className='flex flex-col gap-1'>
               <span className='text-sm text-gray-700'>QPS pattern</span>
-              <select
-                className='border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring'
+              <Select
                 value={inputs.qpsPattern}
-                onChange={e =>
-                  setInputs(s => ({
-                    ...s,
-                    qpsPattern: e.target.value as PricingInputs['qpsPattern'],
-                  }))
+                onValueChange={v =>
+                  setInputs(s => ({ ...s, qpsPattern: v as PricingInputs['qpsPattern'] }))
                 }
               >
-                <option value='sine'>Sine-like</option>
-                <option value='flat'>Flat</option>
-              </select>
-            </label>
+                <SelectTrigger>
+                  <SelectValue placeholder='Select QPS pattern' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='sine'>Sine-like</SelectItem>
+                  <SelectItem value='flat'>Flat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className='justify-self-end'>
               <img
                 src={
@@ -85,7 +115,11 @@ export default function App() {
             </div>
           </div>
           <NumberInput
-            label='MySQL data directory size (GB)'
+            label={
+              inputs.migrationSource === 'mysql'
+                ? 'MySQL data directory size (GB)'
+                : 'Storage Size (GB) on PD Dashboard'
+            }
             value={inputs.mysqlDataDirGB}
             min={0}
             step={1}
@@ -145,7 +179,8 @@ export default function App() {
               }
             />
           )}
-        </div>
+          </CardContent>
+        </Card>
 
         <div className='grid gap-4 bg-white rounded border p-4'>
           <h2 className='font-medium'>Pricing (List)</h2>
@@ -178,8 +213,11 @@ export default function App() {
       </div>
 
       <div className='space-y-4'>
-        <div className='grid gap-2 bg-white rounded border p-4'>
-          <h2 className='font-medium'>Intermediate</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Intermediate</CardTitle>
+          </CardHeader>
+          <CardContent className='grid gap-2'>
           <Row
             label='Metering Storage Size (GB)'
             value={inputs.mysqlDataDirGB / 3 / inputs.compressionRatio}
@@ -212,10 +250,14 @@ export default function App() {
             label='Avg Consumed RCU'
             value={result.averaged.avgConsumedRcu}
           />
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className='grid gap-2 bg-white rounded border p-4'>
-          <h2 className='font-medium'>Starter (Serverless)</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Starter (Serverless)</CardTitle>
+          </CardHeader>
+          <CardContent className='grid gap-2'>
           <Row
             label='Storage Price'
             value={result.starter.storagePriceUsd}
@@ -227,10 +269,14 @@ export default function App() {
           />
           <Row label='RU Price' value={result.starter.ruPriceUsd} money />
           <Row label='Total' value={result.starter.totalUsd} money highlight />
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className='grid gap-2 bg-white rounded border p-4'>
-          <h2 className='font-medium'>Essential</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Essential</CardTitle>
+          </CardHeader>
+          <CardContent className='grid gap-2'>
           <Row
             label='Storage Price'
             value={result.essential.storagePriceUsd}
@@ -251,7 +297,8 @@ export default function App() {
             money
             highlight
           />
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

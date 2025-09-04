@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/ui/card.tsx","./src/components/ui/input.tsx","./src/components/ui/select.tsx","./src/lib/pricing/calc.ts","./src/lib/pricing/model.ts","./src/lib/pricing/__tests__/calc.test.ts","./src/lib/utils/cn.ts","./src/lib/utils/format.ts"],"version":"5.9.2"}

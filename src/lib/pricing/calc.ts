@@ -2,6 +2,7 @@ import type { PricingInputs, PricingResult } from './model'
 
 // defaults chosen as reasonable placeholders; adjust in UI
 export const defaultInputs: PricingInputs = {
+  migrationSource: 'mysql',
   qpsPattern: 'sine',
   mysqlDataDirGB: 500, // GB
   compressionRatio: 0.5, // 50%

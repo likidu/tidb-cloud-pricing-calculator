@@ -1,6 +1,8 @@
 export type QpsPattern = 'sine' | 'flat'
+export type MigrationSource = 'mysql' | 'tidb71'
 
 export interface PricingInputs {
+  migrationSource: MigrationSource
   qpsPattern: QpsPattern
   mysqlDataDirGB: number
   compressionRatio: number // compressed/original (0-1]
