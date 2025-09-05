@@ -11,8 +11,6 @@
       ],
       "dest": "/api/protect"
     },
-    { "src": "/$", "dest": "/api/protect" },
-    { "src": "/index.html", "dest": "/api/protect" },
     { "handle": "filesystem" },
     {
       "src": "/(.*)",
