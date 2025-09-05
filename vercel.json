@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "installCommand": "pnpm i",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist",
+  "routes": [
+    { "handle": "filesystem" },
+    {
+      "src": "/(.*)",
+      "has": [
+        { "type": "header", "key": "accept", "value": ".*text/html.*" }
+      ],
+      "dest": "/api/protect"
+    }
+  ]
+}
+

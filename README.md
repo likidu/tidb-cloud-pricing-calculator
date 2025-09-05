@@ -65,3 +65,14 @@ Notes:
 - Tips
   - For automated tests or scripts, send an `Authorization: Basic <base64(user:pass)>` header.
   - If Vercel Authentication isn’t available on your plan, consider an Edge Function–based Basic Auth as a fallback.
+
+### Edge Function Basic Auth (fallback)
+
+This repo includes a code-based Basic Auth using an Edge Function when Vercel Authentication is not available.
+
+- Files: `api/protect.ts`, `vercel.json`
+- Behavior: All HTML/document requests route through `api/protect`, which enforces Basic Auth and serves `index.html`. Static assets are served directly for performance.
+- Configure environment variable in Vercel Project → Settings → Environment Variables:
+  - `BASIC_AUTH_PASSWORD`: password (username is not required)
+- If these vars are not set, auth is bypassed (useful for local/dev).
+- To protect every request including assets, switch to Vercel Authentication; full asset-level gating via code requires more complex routing and is not recommended for this static SPA.
