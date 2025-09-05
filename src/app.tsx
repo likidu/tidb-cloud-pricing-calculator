@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
+import { Button } from './components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { Input } from './components/ui/input'
-import { Button } from './components/ui/button'
 import {
   Select,
   SelectContent,
@@ -94,7 +94,8 @@ export default function App() {
     }
   }, [inputs.migrationSource, inputs.regionKey, inputs.dualLayerEncryption])
 
-  const isLogin = typeof window !== 'undefined' && window.location.pathname === '/login'
+  const isLogin =
+    typeof window !== 'undefined' && window.location.pathname === '/login'
 
   if (isLogin) {
     return (
@@ -113,7 +114,7 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={150}>
-    <div className='mx-auto max-w-6xl p-6 space-y-6'>
+      <div className='mx-auto max-w-6xl p-6 space-y-6'>
         <div>
           <h1 className='text-2xl font-semibold'>
             TiDB Cloud Pricing Calculator
@@ -284,7 +285,7 @@ export default function App() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Pricing (List)</CardTitle>
+                <CardTitle>List Price</CardTitle>
               </CardHeader>
               <CardContent className='grid gap-4'>
                 <div className='flex flex-col gap-1'>
@@ -382,7 +383,18 @@ export default function App() {
               </CardHeader>
               <CardContent className='grid gap-2'>
                 <Row
-                  label='Metering Storage Size (GB)'
+                  label={
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className='border-b border-dashed border-gray-400 cursor-help'>
+                          Metering Storage Size (GB)
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Original size of data in a single replica.
+                      </TooltipContent>
+                    </Tooltip>
+                  }
                   value={inputs.mysqlDataDirGB / 3 / inputs.compressionRatio}
                 />
                 {inputs.qpsPattern === 'sine' ? (
@@ -411,7 +423,18 @@ export default function App() {
                   />
                 )}
                 <Row
-                  label='Avg Consumed RCU'
+                  label={
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className='border-b border-dashed border-gray-400 cursor-help'>
+                          Avg Consumed RCU
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        RCU used for final calculation based on QPS pattern.
+                      </TooltipContent>
+                    </Tooltip>
+                  }
                   value={result.averaged.avgConsumedRcu}
                 />
               </CardContent>
@@ -472,7 +495,7 @@ export default function App() {
             </Card>
           </div>
         </div>
-    </div>
+      </div>
     </TooltipProvider>
   )
 }
@@ -530,7 +553,7 @@ function Row({
   money,
   highlight,
 }: {
-  label: string
+  label: React.ReactNode
   value: number
   money?: boolean
   highlight?: boolean
