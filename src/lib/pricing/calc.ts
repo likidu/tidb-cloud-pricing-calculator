@@ -4,6 +4,8 @@ import type { PricingInputs, PricingResult } from './model'
 export const defaultInputs: PricingInputs = {
   migrationSource: 'mysql',
   qpsPattern: 'sine',
+  regionKey: 'aws-ap-southeast-1',
+  dualLayerEncryption: false,
   mysqlDataDirGB: 500, // GB
   compressionRatio: 0.5, // 50%
   vcpuBaseline: 8,

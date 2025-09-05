@@ -46,6 +46,28 @@ In this spreadsheet calculator ![Migrate from MySQL](./docs/spreadsheet_migrate_
 - Provisioned RCU Price: `[Provisioned RCU] * [RCU Price]`
 - Essential Total Price: `[Storage Price] + [Provisioned RCU Price]`
 
+### Cloud provider and region multipliers
+
+#### Essential
+
+**Alibaba Cloud**
+
+| Resource                                                    | Jakarta | Mexico | Singapore | Tokyo |
+| ----------------------------------------------------------- | ------- | ------ | --------- | ----- |
+| Compute (Million RU price ($ / 1M RU))                      | $0.14   | $0.21  | $0.12     | $0.14 |
+| Compute (RCU price ($ / RCU-month))                         | $0.27   | $0.22  | $0.24     | $0.28 |
+| Row-based storage ($ / GB-month)                            | $0.24   | $0.24  | $0.24     | $0.24 |
+| Row-based storage with dual-layer encryption ($ / GB-month) | $0.36   | $0.36  | $0.36     | $0.36 |
+
+**AWS**
+
+| Resource                                                    | Oregon | Virginia | Singapore | Tokyo |
+| ----------------------------------------------------------- | ------ | -------- | --------- | ----- |
+| Compute (Million RU price ($ / 1M RU))                      | $0.1   | $0.1     | $0.12     | $0.12 |
+| Compute (RCU price ($ / RCU-month))                         | $0.2   | $0.2     | $0.24     | $0.28 |
+| Row-based storage ($ / GB-month)                            | $0.2   | $0.2     | $0.24     | $0.24 |
+| Row-based storage with dual-layer encryption ($ / GB-month) | $0.3   | $0.3     | $0.36     | $0.36 |
+
 ## Key Decisions
 
 - Why we chose this framework

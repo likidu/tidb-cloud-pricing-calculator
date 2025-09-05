@@ -156,7 +156,7 @@ Please refer to the [ARCHITECTURE.md](./ARCHITECTURE.md) for the actual model.
 Terminology:
 
 - Product: A billable capability (e.g., compute vCPU hours, storage GB-month, backup GB-month, egress GB).
-- Region: Multipliers or price tables per region/cloud (AWS/Alibaba Cloud, us-east-1, eu-west-1).
+- Region: Multipliers or price tables per cloud/region (AWS/Alibaba Cloud, us-east-1, eu-west-1).
 - Plan: Bundle-level modifiers (e.g., Starter vs. Essential).
 - Discounts: Percentage or contract-based reductions applied after tiering.
 

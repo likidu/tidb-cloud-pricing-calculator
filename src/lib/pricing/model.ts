@@ -1,9 +1,12 @@
 export type QpsPattern = 'sine' | 'flat'
 export type MigrationSource = 'mysql' | 'tidb71'
+export type RegionKey = string
 
 export interface PricingInputs {
   migrationSource: MigrationSource
   qpsPattern: QpsPattern
+  regionKey?: RegionKey
+  dualLayerEncryption?: boolean
   mysqlDataDirGB: number
   compressionRatio: number // compressed/original (0-1]
   // For sine-like pattern

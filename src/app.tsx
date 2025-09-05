@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
-import { calculatePricing, defaultInputs, type PricingInputs } from './lib/pricing/calc'
-import { formatCurrency } from './lib/utils/format'
+import type { ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
+import { Input } from './components/ui/input'
 import {
   Select,
   SelectContent,
@@ -8,8 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from './components/ui/select'
-import { Input } from './components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
+import { Switch } from './components/ui/switch'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './components/ui/tooltip'
+import {
+  calculatePricing,
+  defaultInputs,
+  type PricingInputs,
+} from './lib/pricing/calc'
+import { REGIONS, derivePrices, formatRegionLabel } from './lib/pricing/regions'
+import { formatCurrency } from './lib/utils/format'
 
 function NumberInput({
   label,
@@ -18,7 +31,7 @@ function NumberInput({
   step = 1,
   min,
 }: {
-  label: string
+  label: ReactNode
   value: number
   onChange: (v: number) => void
   step?: number
@@ -26,7 +39,7 @@ function NumberInput({
 }) {
   return (
     <label className='flex flex-col gap-1'>
-      <span className='text-sm text-gray-700'>{label}</span>
+      <div className='text-sm text-gray-700'>{label}</div>
       <Input
         type='number'
         value={Number.isFinite(value) ? value : ('' as unknown as number)}
@@ -39,268 +52,410 @@ function NumberInput({
 }
 
 export default function App() {
-  const [inputs, setInputs] = useState<PricingInputs>(defaultInputs)
+  const [inputs, setInputs] = useState<PricingInputs>(() => {
+    // Load from localStorage if present
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('tidbcalc:prefs')
+        if (raw) {
+          const prefs = JSON.parse(raw) as Partial<
+            Pick<
+              PricingInputs,
+              'migrationSource' | 'regionKey' | 'dualLayerEncryption'
+            >
+          >
+          const base = { ...defaultInputs, ...prefs }
+          const prices = derivePrices(base.regionKey, base.dualLayerEncryption)
+          return { ...base, ...prices }
+        }
+      } catch {
+        return defaultInputs
+      }
+    }
+    return defaultInputs
+  })
 
   const result = useMemo(() => calculatePricing(inputs), [inputs])
 
+  // Persist key preferences
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'tidbcalc:prefs',
+        JSON.stringify({
+          migrationSource: inputs.migrationSource,
+          regionKey: inputs.regionKey,
+          dualLayerEncryption: inputs.dualLayerEncryption,
+        })
+      )
+    } catch {
+      /* ignore write errors */
+    }
+  }, [inputs.migrationSource, inputs.regionKey, inputs.dualLayerEncryption])
+
   return (
-    <div className='mx-auto max-w-6xl p-6 grid gap-6 md:grid-cols-2'>
-      <div className='space-y-4'>
-        <h1 className='text-2xl font-semibold'>
-          TiDB Cloud Pricing Calculator
-        </h1>
-        <p className='text-sm text-gray-600'>
-          Based on current RU model assumptions (see ARCHITECTURE.md).
-        </p>
+    <TooltipProvider delayDuration={150}>
+      <div className='mx-auto max-w-6xl p-6 space-y-6'>
+        <div>
+          <h1 className='text-2xl font-semibold'>
+            TiDB Cloud Pricing Calculator
+          </h1>
+          <p className='text-sm text-gray-600'>
+            Based on current RU model assumptions (by 9/4).
+          </p>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Migration Source</CardTitle>
-          </CardHeader>
-          <CardContent className='grid gap-4'>
-            <Select
-              value={inputs.migrationSource}
-              onValueChange={v =>
-                setInputs(s => ({ ...s, migrationSource: v as PricingInputs['migrationSource'] }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder='Select migration source' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='mysql'>MySQL (RDS)</SelectItem>
-                <SelectItem value='tidb71'>TiDB 7.1+</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+        <div className='grid gap-6 md:grid-cols-2'>
+          <div className='space-y-4'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Migration Source</CardTitle>
+              </CardHeader>
+              <CardContent className='grid gap-4'>
+                <Select
+                  value={inputs.migrationSource}
+                  onValueChange={v =>
+                    setInputs(s => ({
+                      ...s,
+                      migrationSource: v as PricingInputs['migrationSource'],
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select migration source' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='mysql'>MySQL (RDS)</SelectItem>
+                    <SelectItem value='tidb71'>TiDB 7.1+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Workload Inputs</CardTitle>
-          </CardHeader>
-          <CardContent className='grid gap-4'>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4 items-center'>
-            <div className='flex flex-col gap-1'>
-              <span className='text-sm text-gray-700'>QPS pattern</span>
-              <Select
-                value={inputs.qpsPattern}
-                onValueChange={v =>
-                  setInputs(s => ({ ...s, qpsPattern: v as PricingInputs['qpsPattern'] }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='Select QPS pattern' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='sine'>Sine-like</SelectItem>
-                  <SelectItem value='flat'>Flat</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='justify-self-end'>
-              <img
-                src={
-                  inputs.qpsPattern === 'sine'
-                    ? '/assets/qps_sine.svg'
-                    : '/assets/qps_flat.svg'
-                }
-                alt={
-                  inputs.qpsPattern === 'sine'
-                    ? 'Sine-like QPS pattern'
-                    : 'Flat QPS pattern'
-                }
-                className='max-h-24 object-contain ml-auto'
-              />
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Workload Inputs</CardTitle>
+              </CardHeader>
+              <CardContent className='grid gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 items-center'>
+                  <div className='flex flex-col gap-1'>
+                    <span className='text-sm text-gray-700'>QPS pattern</span>
+                    <Select
+                      value={inputs.qpsPattern}
+                      onValueChange={v =>
+                        setInputs(s => ({
+                          ...s,
+                          qpsPattern: v as PricingInputs['qpsPattern'],
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select QPS pattern' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='sine'>Sine-like</SelectItem>
+                        <SelectItem value='flat'>Flat</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className='justify-self-end'>
+                    <img
+                      src={
+                        inputs.qpsPattern === 'sine'
+                          ? '/assets/qps_sine.svg'
+                          : '/assets/qps_flat.svg'
+                      }
+                      alt={
+                        inputs.qpsPattern === 'sine'
+                          ? 'Sine-like QPS pattern'
+                          : 'Flat QPS pattern'
+                      }
+                      className='max-h-24 object-contain ml-auto'
+                    />
+                  </div>
+                </div>
+                <NumberInput
+                  label={
+                    inputs.migrationSource === 'mysql'
+                      ? 'MySQL data directory size (GB)'
+                      : 'Storage Size (GB) on PD Dashboard'
+                  }
+                  value={inputs.mysqlDataDirGB}
+                  min={0}
+                  step={1}
+                  onChange={v =>
+                    setInputs(s => ({ ...s, mysqlDataDirGB: v || 0 }))
+                  }
+                />
+                <NumberInput
+                  label='Compression ratio (Compressed/Original)'
+                  value={inputs.compressionRatio}
+                  min={0.01}
+                  step={0.01}
+                  onChange={v =>
+                    setInputs(s => ({ ...s, compressionRatio: v || 0 }))
+                  }
+                />
+                {inputs.qpsPattern === 'sine' ? (
+                  <div className='grid grid-cols-2 gap-4'>
+                    <NumberInput
+                      label='Baseline vCPU used'
+                      value={inputs.vcpuBaseline}
+                      min={0}
+                      step={1}
+                      onChange={v =>
+                        setInputs(s => ({ ...s, vcpuBaseline: v || 0 }))
+                      }
+                    />
+                    <NumberInput
+                      label='Peak vCPU used'
+                      value={inputs.vcpuPeak}
+                      min={0}
+                      step={1}
+                      onChange={v =>
+                        setInputs(s => ({ ...s, vcpuPeak: v || 0 }))
+                      }
+                    />
+                  </div>
+                ) : (
+                  <NumberInput
+                    label='Average vCPU used'
+                    value={inputs.vcpuAverage ?? 0}
+                    min={0}
+                    step={1}
+                    onChange={v =>
+                      setInputs(s => ({ ...s, vcpuAverage: v || 0 }))
+                    }
+                  />
+                )}
+                <NumberInput
+                  label={
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className='border-b border-dashed border-gray-400 cursor-help'>
+                          RCU per vCPU
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        The faster the CPU or the higher the TPS, the higher
+                        this parameter is.
+                      </TooltipContent>
+                    </Tooltip>
+                  }
+                  value={inputs.rcuPerVcpu}
+                  min={0}
+                  step={1}
+                  onChange={v => setInputs(s => ({ ...s, rcuPerVcpu: v || 0 }))}
+                />
+                {inputs.qpsPattern === 'sine' && (
+                  <NumberInput
+                    label='Baseline workload percentage (0–1)'
+                    value={inputs.baselineWorkloadPct}
+                    min={0}
+                    step={0.01}
+                    onChange={v =>
+                      setInputs(s => ({
+                        ...s,
+                        baselineWorkloadPct: Math.max(0, Math.min(1, v || 0)),
+                      }))
+                    }
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Pricing (List)</CardTitle>
+              </CardHeader>
+              <CardContent className='grid gap-4'>
+                <div className='flex flex-col gap-1'>
+                  <span className='text-sm text-gray-700'>
+                    Cloud provider and region
+                  </span>
+                  <Select
+                    value={inputs.regionKey}
+                    onValueChange={key => {
+                      const r = REGIONS.find(x => x.key === key) || REGIONS[0]
+                      const storage = inputs.dualLayerEncryption
+                        ? r.storagePriceEncrypted
+                        : r.storagePrice
+                      setInputs(s => ({
+                        ...s,
+                        regionKey: key,
+                        storagePricePerGBMonth: storage,
+                        millionRuPrice: r.millionRuPrice,
+                        rcuPrice: r.rcuPrice,
+                      }))
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder='Select region' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REGIONS.map(r => (
+                        <SelectItem key={r.key} value={r.key}>
+                          <span className='inline-flex items-center'>
+                            <img
+                              src={
+                                r.provider === 'AWS'
+                                  ? '/assets/aws-color.svg'
+                                  : '/assets/alibabacloud-color.svg'
+                              }
+                              alt={r.provider}
+                              className='h-4 w-4 mr-2'
+                            />
+                            {formatRegionLabel(r)}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <div className='flex flex-col'>
+                    <span className='text-sm text-gray-700'>
+                      Enable Dual-layer encryption
+                    </span>
+                  </div>
+                  <Switch
+                    checked={!!inputs.dualLayerEncryption}
+                    onCheckedChange={checked => {
+                      const r =
+                        REGIONS.find(x => x.key === inputs.regionKey) ||
+                        REGIONS[0]
+                      const storage = checked
+                        ? r.storagePriceEncrypted
+                        : r.storagePrice
+                      setInputs(s => ({
+                        ...s,
+                        dualLayerEncryption: !!checked,
+                        storagePricePerGBMonth: storage,
+                      }))
+                    }}
+                  />
+                </div>
+                <div className='h-px bg-gray-200' />
+                <div className='grid gap-4'>
+                  <Row
+                    label='Row-based storage price ($ / GB-month)'
+                    value={inputs.storagePricePerGBMonth}
+                    money
+                  />
+                  <Row
+                    label='Million RU price ($ / 1M RU)'
+                    value={inputs.millionRuPrice}
+                    money
+                  />
+                  <Row
+                    label='RCU price ($ / RCU-month)'
+                    value={inputs.rcuPrice}
+                    money
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <NumberInput
-            label={
-              inputs.migrationSource === 'mysql'
-                ? 'MySQL data directory size (GB)'
-                : 'Storage Size (GB) on PD Dashboard'
-            }
-            value={inputs.mysqlDataDirGB}
-            min={0}
-            step={1}
-            onChange={v => setInputs(s => ({ ...s, mysqlDataDirGB: v || 0 }))}
-          />
-          <NumberInput
-            label='Compression ratio (Compressed/Original)'
-            value={inputs.compressionRatio}
-            min={0.01}
-            step={0.01}
-            onChange={v => setInputs(s => ({ ...s, compressionRatio: v || 0 }))}
-          />
-          {inputs.qpsPattern === 'sine' ? (
-            <div className='grid grid-cols-2 gap-4'>
-              <NumberInput
-                label='Baseline vCPU used'
-                value={inputs.vcpuBaseline}
-                min={0}
-                step={1}
-                onChange={v => setInputs(s => ({ ...s, vcpuBaseline: v || 0 }))}
-              />
-              <NumberInput
-                label='Peak vCPU used'
-                value={inputs.vcpuPeak}
-                min={0}
-                step={1}
-                onChange={v => setInputs(s => ({ ...s, vcpuPeak: v || 0 }))}
-              />
-            </div>
-          ) : (
-            <NumberInput
-              label='Average vCPU used'
-              value={inputs.vcpuAverage ?? 0}
-              min={0}
-              step={1}
-              onChange={v => setInputs(s => ({ ...s, vcpuAverage: v || 0 }))}
-            />
-          )}
-          <NumberInput
-            label='RCU per vCPU'
-            value={inputs.rcuPerVcpu}
-            min={0}
-            step={1}
-            onChange={v => setInputs(s => ({ ...s, rcuPerVcpu: v || 0 }))}
-          />
-          {inputs.qpsPattern === 'sine' && (
-            <NumberInput
-              label='Baseline workload percentage (0–1)'
-              value={inputs.baselineWorkloadPct}
-              min={0}
-              step={0.01}
-              onChange={v =>
-                setInputs(s => ({
-                  ...s,
-                  baselineWorkloadPct: Math.max(0, Math.min(1, v || 0)),
-                }))
-              }
-            />
-          )}
-          </CardContent>
-        </Card>
 
-        <div className='grid gap-4 bg-white rounded border p-4'>
-          <h2 className='font-medium'>Pricing (List)</h2>
-          <NumberInput
-            label='Row-based storage price ($ / GB-month)'
-            value={inputs.storagePricePerGBMonth}
-            min={0}
-            step={0.01}
-            onChange={v =>
-              setInputs(s => ({ ...s, storagePricePerGBMonth: v || 0 }))
-            }
-          />
-          <div className='grid grid-cols-2 gap-4'>
-            <NumberInput
-              label='Million RU price ($ / 1M RU)'
-              value={inputs.millionRuPrice}
-              min={0}
-              step={0.01}
-              onChange={v => setInputs(s => ({ ...s, millionRuPrice: v || 0 }))}
-            />
-            <NumberInput
-              label='RCU price ($ / RCU-month)'
-              value={inputs.rcuPrice}
-              min={0}
-              step={0.01}
-              onChange={v => setInputs(s => ({ ...s, rcuPrice: v || 0 }))}
-            />
+          <div className='space-y-4'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Intermediate</CardTitle>
+              </CardHeader>
+              <CardContent className='grid gap-2'>
+                <Row
+                  label='Metering Storage Size (GB)'
+                  value={inputs.mysqlDataDirGB / 3 / inputs.compressionRatio}
+                />
+                {inputs.qpsPattern === 'sine' ? (
+                  <>
+                    <Row
+                      label='Peak RCU'
+                      value={inputs.vcpuPeak * inputs.rcuPerVcpu}
+                    />
+                    <Row
+                      label='Baseline RCU'
+                      value={inputs.vcpuBaseline * inputs.rcuPerVcpu}
+                    />
+                    <Row
+                      label='Amplitude'
+                      value={Math.max(
+                        0,
+                        (inputs.vcpuPeak - inputs.vcpuBaseline) *
+                          inputs.rcuPerVcpu
+                      )}
+                    />
+                  </>
+                ) : (
+                  <Row
+                    label='Average RCU'
+                    value={(inputs.vcpuAverage ?? 0) * inputs.rcuPerVcpu}
+                  />
+                )}
+                <Row
+                  label='Avg Consumed RCU'
+                  value={result.averaged.avgConsumedRcu}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className='text-[#AA098F]'>
+                  Starter (Serverless)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='grid gap-2'>
+                <Row
+                  label='Storage Price'
+                  value={result.starter.storagePriceUsd}
+                  money
+                />
+                <Row
+                  label='Consumed RU (Million)'
+                  value={result.starter.consumedRuMillion}
+                />
+                <Row label='RU Price' value={result.starter.ruPriceUsd} money />
+                <Row
+                  label='Total'
+                  value={result.starter.totalUsd}
+                  money
+                  highlight
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className='text-[#4A40BF]'>Essential</CardTitle>
+              </CardHeader>
+              <CardContent className='grid gap-2'>
+                <Row
+                  label='Storage Price'
+                  value={result.essential.storagePriceUsd}
+                  money
+                />
+                <Row
+                  label='Provisioned RCU'
+                  value={result.essential.provisionedRcu}
+                />
+                <Row
+                  label='Provisioned RCU Price'
+                  value={result.essential.provisionedRcuPriceUsd}
+                  money
+                />
+                <Row
+                  label='Total'
+                  value={result.essential.totalUsd}
+                  money
+                  highlight
+                />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
-
-      <div className='space-y-4'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Intermediate</CardTitle>
-          </CardHeader>
-          <CardContent className='grid gap-2'>
-          <Row
-            label='Metering Storage Size (GB)'
-            value={inputs.mysqlDataDirGB / 3 / inputs.compressionRatio}
-          />
-          {inputs.qpsPattern === 'sine' ? (
-            <>
-              <Row
-                label='Peak RCU'
-                value={inputs.vcpuPeak * inputs.rcuPerVcpu}
-              />
-              <Row
-                label='Baseline RCU'
-                value={inputs.vcpuBaseline * inputs.rcuPerVcpu}
-              />
-              <Row
-                label='Amplitude'
-                value={Math.max(
-                  0,
-                  (inputs.vcpuPeak - inputs.vcpuBaseline) * inputs.rcuPerVcpu
-                )}
-              />
-            </>
-          ) : (
-            <Row
-              label='Average RCU'
-              value={(inputs.vcpuAverage ?? 0) * inputs.rcuPerVcpu}
-            />
-          )}
-          <Row
-            label='Avg Consumed RCU'
-            value={result.averaged.avgConsumedRcu}
-          />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Starter (Serverless)</CardTitle>
-          </CardHeader>
-          <CardContent className='grid gap-2'>
-          <Row
-            label='Storage Price'
-            value={result.starter.storagePriceUsd}
-            money
-          />
-          <Row
-            label='Consumed RU (Million)'
-            value={result.starter.consumedRuMillion}
-          />
-          <Row label='RU Price' value={result.starter.ruPriceUsd} money />
-          <Row label='Total' value={result.starter.totalUsd} money highlight />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Essential</CardTitle>
-          </CardHeader>
-          <CardContent className='grid gap-2'>
-          <Row
-            label='Storage Price'
-            value={result.essential.storagePriceUsd}
-            money
-          />
-          <Row
-            label='Provisioned RCU'
-            value={result.essential.provisionedRcu}
-          />
-          <Row
-            label='Provisioned RCU Price'
-            value={result.essential.provisionedRcuPriceUsd}
-            money
-          />
-          <Row
-            label='Total'
-            value={result.essential.totalUsd}
-            money
-            highlight
-          />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </TooltipProvider>
   )
 }
 
