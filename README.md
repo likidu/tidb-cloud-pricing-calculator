@@ -47,3 +47,21 @@ Notes:
 - This app uses Vite + React + TypeScript with Tailwind for styling.
 - The core pricing math lives in `src/lib/pricing/calc.ts` and is designed to be framework-agnostic and unit tested.
 - The minimal UI in `src/app.tsx` lets you tweak inputs and see live results for Starter (Serverless) and Essential totals.
+
+## Vercel Deployment & Protection
+
+- Build settings
+  - Install: `pnpm i`
+  - Build: `pnpm build`
+  - Output: `dist`
+  - Vercel usually auto-detects Vite. Adjust in Project → Settings → Build & Development if needed.
+
+- Vercel Authentication (password protection)
+  - In Vercel: Project → Settings → Deployment Protection (or Security) → Vercel Authentication.
+  - Choose environments to protect (Preview, Production) and set Username/Password.
+  - Save and redeploy. All requests (HTML, assets, API) will require Basic Auth.
+  - Local dev (`pnpm dev`) is not affected.
+
+- Tips
+  - For automated tests or scripts, send an `Authorization: Basic <base64(user:pass)>` header.
+  - If Vercel Authentication isn’t available on your plan, consider an Edge Function–based Basic Auth as a fallback.
