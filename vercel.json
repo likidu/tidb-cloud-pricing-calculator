@@ -4,14 +4,19 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "routes": [
-    { "handle": "filesystem" },
     {
       "src": "/(.*)",
       "has": [
         { "type": "header", "key": "accept", "value": ".*text/html.*" }
       ],
       "dest": "/api/protect"
+    },
+    { "src": "/$", "dest": "/api/protect" },
+    { "src": "/index.html", "dest": "/api/protect" },
+    { "handle": "filesystem" },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
-
