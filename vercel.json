@@ -4,6 +4,7 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "routes": [
+    { "src": "/login", "dest": "/index.html" },
     {
       "src": "/(.*)",
       "has": [

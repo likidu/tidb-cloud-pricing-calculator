@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { Input } from './components/ui/input'
+import { Button } from './components/ui/button'
 import {
   Select,
   SelectContent,
@@ -93,9 +94,26 @@ export default function App() {
     }
   }, [inputs.migrationSource, inputs.regionKey, inputs.dualLayerEncryption])
 
+  const isLogin = typeof window !== 'undefined' && window.location.pathname === '/login'
+
+  if (isLogin) {
+    return (
+      <div className='min-h-screen grid place-items-center p-6'>
+        <Card className='w-full max-w-sm'>
+          <CardHeader>
+            <CardTitle>Sign in</CardTitle>
+          </CardHeader>
+          <CardContent className='grid gap-3'>
+            <LoginForm />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <TooltipProvider delayDuration={150}>
-      <div className='mx-auto max-w-6xl p-6 space-y-6'>
+    <div className='mx-auto max-w-6xl p-6 space-y-6'>
         <div>
           <h1 className='text-2xl font-semibold'>
             TiDB Cloud Pricing Calculator
@@ -454,8 +472,55 @@ export default function App() {
             </Card>
           </div>
         </div>
-      </div>
+    </div>
     </TooltipProvider>
+  )
+}
+
+function LoginForm() {
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      if (res.ok) {
+        window.location.href = '/'
+      } else {
+        setError('Incorrect password.')
+      }
+    } catch {
+      setError('Network error.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form className='grid gap-3' onSubmit={onSubmit}>
+      <label className='flex flex-col gap-1'>
+        <span className='text-sm text-gray-700'>Password</span>
+        <Input
+          type='password'
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder='Enter password'
+          required
+        />
+      </label>
+      {error && <div className='text-sm text-red-600'>{error}</div>}
+      <Button type='submit' disabled={loading}>
+        {loading ? 'Signing in…' : 'Sign in'}
+      </Button>
+    </form>
   )
 }
 
