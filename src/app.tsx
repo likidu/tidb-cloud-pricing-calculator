@@ -24,6 +24,7 @@ import {
 } from './lib/pricing/calc'
 import { REGIONS, derivePrices, formatRegionLabel } from './lib/pricing/regions'
 import { formatCurrency } from './lib/utils/format'
+import { MIN_COMPRESSION_RATIO } from './lib/config'
 
 function NumberInput({
   label,
@@ -31,12 +32,16 @@ function NumberInput({
   onChange,
   step = 1,
   min,
+  max,
+  disabled,
 }: {
   label: ReactNode
   value: number
   onChange: (v: number) => void
   step?: number
   min?: number
+  max?: number
+  disabled?: boolean
 }) {
   return (
     <label className='flex flex-col gap-1'>
@@ -46,6 +51,9 @@ function NumberInput({
         value={Number.isFinite(value) ? value : ('' as unknown as number)}
         step={step}
         min={min}
+        max={max}
+        disabled={disabled}
+        readOnly={disabled}
         onChange={e => onChange(parseFloat(e.target.value))}
       />
     </label>
@@ -66,6 +74,12 @@ export default function App() {
             >
           >
           const base = { ...defaultInputs, ...prefs }
+          // Set sensible default compression per source
+          if (base.migrationSource === 'mysql') {
+            base.compressionRatio = 1
+          } else if (base.migrationSource === 'tidb71') {
+            base.compressionRatio = 0.4
+          }
           const prices = derivePrices(base.regionKey, base.dualLayerEncryption)
           return { ...base, ...prices }
         }
@@ -137,6 +151,15 @@ export default function App() {
                     setInputs(s => ({
                       ...s,
                       migrationSource: v as PricingInputs['migrationSource'],
+                      // Force compression ratio to 1 for MySQL (RDS).
+                      // For TiDB 7.1+, set default to 0.4 when switching to it.
+                      compressionRatio:
+                        (v as PricingInputs['migrationSource']) === 'mysql'
+                          ? 1
+                          : (s.migrationSource !== 'tidb71' &&
+                              (v as PricingInputs['migrationSource']) === 'tidb71')
+                            ? 0.4
+                            : s.compressionRatio,
                     }))
                   }
                 >
@@ -208,11 +231,29 @@ export default function App() {
                 />
                 <NumberInput
                   label='Compression ratio (Compressed/Original)'
-                  value={inputs.compressionRatio}
-                  min={0.01}
+                  value={
+                    inputs.migrationSource === 'mysql'
+                      ? 1
+                      : inputs.compressionRatio
+                  }
+                  min={MIN_COMPRESSION_RATIO}
+                  max={1}
                   step={0.01}
+                  disabled={inputs.migrationSource === 'mysql'}
                   onChange={v =>
-                    setInputs(s => ({ ...s, compressionRatio: v || 0 }))
+                    setInputs(s => ({
+                      ...s,
+                      compressionRatio:
+                        s.migrationSource === 'mysql'
+                          ? 1
+                          : Math.max(
+                              MIN_COMPRESSION_RATIO,
+                              Math.min(
+                                1,
+                                Number.isFinite(v) ? (v as number) : s.compressionRatio
+                              )
+                            ),
+                    }))
                   }
                 />
                 {inputs.qpsPattern === 'sine' ? (

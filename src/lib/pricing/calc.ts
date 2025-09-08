@@ -1,4 +1,5 @@
 import type { PricingInputs, PricingResult } from './model'
+import { MIN_COMPRESSION_RATIO } from '../config'
 
 // defaults chosen as reasonable placeholders; adjust in UI
 export const defaultInputs: PricingInputs = {
@@ -7,7 +8,7 @@ export const defaultInputs: PricingInputs = {
   regionKey: 'aws-ap-southeast-1',
   dualLayerEncryption: false,
   mysqlDataDirGB: 500, // GB
-  compressionRatio: 0.5, // 50%
+  compressionRatio: 1, // MySQL (RDS) defaults to no compression
   vcpuBaseline: 8,
   vcpuPeak: 32,
   vcpuAverage: 16,
@@ -24,7 +25,11 @@ const HOURS_PER_MONTH = 730
 const TWO_OVER_PI = 2 / Math.PI
 
 export function calculatePricing(input: PricingInputs): PricingResult {
-  const compression = clamp(input.compressionRatio, 0.0001, 1)
+  // If migration source is MySQL (RDS), compression is effectively disabled.
+  const compression =
+    input.migrationSource === 'mysql'
+      ? 1
+      : clamp(input.compressionRatio, MIN_COMPRESSION_RATIO, 1)
   const baselinePct = clamp(input.baselineWorkloadPct, 0, 1)
 
   const meteringStorageGB = safeMax(0, input.mysqlDataDirGB / 3 / compression)
