@@ -76,3 +76,7 @@ This repo includes a code-based Basic Auth using an Edge Function when Vercel Au
   - `BASIC_AUTH_PASSWORD`: password (username is not required)
 - If these vars are not set, auth is bypassed (useful for local/dev).
 - To protect every request including assets, switch to Vercel Authentication; full asset-level gating via code requires more complex routing and is not recommended for this static SPA.
+
+## Todos
+
+- [ ] Move more parameters into `config.ts`
