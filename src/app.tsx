@@ -17,14 +17,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './components/ui/tooltip'
-import {
-  calculatePricing,
-  defaultInputs,
-  type PricingInputs,
-} from './lib/pricing/calc'
+import { calculatePricing, defaultInputs, type PricingInputs } from './lib/pricing/calc'
+import type { Plan } from './lib/pricing/model'
 import { REGIONS, derivePrices, formatRegionLabel } from './lib/pricing/regions'
 import { formatCurrency } from './lib/utils/format'
 import { MIN_COMPRESSION_RATIO } from './lib/config'
+import { ChevronDown } from 'lucide-react'
 
 function NumberInput({
   label,
@@ -61,6 +59,20 @@ function NumberInput({
 }
 
 export default function App() {
+  const [plan, setPlan] = useState<Plan>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('tidbcalc:prefs')
+        if (raw) {
+          const prefs = JSON.parse(raw) as Partial<{ plan: Plan }>
+          if (prefs.plan === 'starter' || prefs.plan === 'essential') return prefs.plan
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return 'starter'
+  })
   const [inputs, setInputs] = useState<PricingInputs>(() => {
     // Load from localStorage if present
     if (typeof window !== 'undefined') {
@@ -92,7 +104,7 @@ export default function App() {
 
   const result = useMemo(() => calculatePricing(inputs), [inputs])
 
-  // Persist key preferences
+  // Persist key preferences (including plan)
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -101,12 +113,13 @@ export default function App() {
           migrationSource: inputs.migrationSource,
           regionKey: inputs.regionKey,
           dualLayerEncryption: inputs.dualLayerEncryption,
+          plan,
         })
       )
     } catch {
       /* ignore write errors */
     }
-  }, [inputs.migrationSource, inputs.regionKey, inputs.dualLayerEncryption])
+  }, [inputs.migrationSource, inputs.regionKey, inputs.dualLayerEncryption, plan])
 
   const isLogin =
     typeof window !== 'undefined' && window.location.pathname === '/login'
@@ -402,16 +415,20 @@ export default function App() {
                     value={inputs.storagePricePerGBMonth}
                     money
                   />
-                  <Row
-                    label='Million RU price ($ / 1M RU)'
-                    value={inputs.millionRuPrice}
-                    money
-                  />
-                  <Row
-                    label='RCU price ($ / RCU-month)'
-                    value={inputs.rcuPrice}
-                    money
-                  />
+                  {plan === 'starter' && (
+                    <Row
+                      label='Million RU price ($ / 1M RU)'
+                      value={inputs.millionRuPrice}
+                      money
+                    />
+                  )}
+                  {plan === 'essential' && (
+                    <Row
+                      label='RCU price ($ / RCU-month)'
+                      value={inputs.rcuPrice}
+                      money
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -420,120 +437,163 @@ export default function App() {
           <div className='space-y-4'>
             <Card>
               <CardHeader>
-                <CardTitle>Intermediate</CardTitle>
+                <CardTitle>Plan</CardTitle>
               </CardHeader>
-              <CardContent className='grid gap-2'>
-                <Row
-                  label={
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className='border-b border-dashed border-gray-400 cursor-help'>
-                          Metering Storage Size (GB)
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Original size of data in a single replica.
-                      </TooltipContent>
-                    </Tooltip>
-                  }
-                  value={inputs.mysqlDataDirGB / 3 / inputs.compressionRatio}
-                />
-                {inputs.qpsPattern === 'sine' ? (
-                  <>
-                    <Row
-                      label='Peak RCU'
-                      value={inputs.vcpuPeak * inputs.rcuPerVcpu}
-                    />
-                    <Row
-                      label='Baseline RCU'
-                      value={inputs.vcpuBaseline * inputs.rcuPerVcpu}
-                    />
-                    <Row
-                      label='Amplitude'
-                      value={Math.max(
-                        0,
-                        (inputs.vcpuPeak - inputs.vcpuBaseline) *
-                          inputs.rcuPerVcpu
-                      )}
-                    />
-                  </>
-                ) : (
+              <CardContent>
+                <div className='grid grid-cols-2 gap-3'>
+                  <button
+                    type='button'
+                    onClick={() => setPlan('starter')}
+                    className={`text-left rounded-md border p-3 transition-colors focus:outline-none ${
+                      plan === 'starter'
+                        ? 'ring-1 ring-gray-900/30 shadow-sm bg-white'
+                        : 'bg-gray-50 hover:bg-white'
+                    }`}
+                  >
+                    <div className='font-semibold text-[#AA098F]'>Starter</div>
+                    <div className='text-sm text-gray-600'>
+                      Use for testing, prototyping, and hobby usage.
+                    </div>
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => setPlan('essential')}
+                    className={`text-left rounded-md border p-3 transition-colors focus:outline-none ${
+                      plan === 'essential'
+                        ? 'ring-1 ring-gray-900/30 shadow-sm bg-white'
+                        : 'bg-gray-50 hover:bg-white'
+                    }`}
+                  >
+                    <div className='font-semibold text-[#4A40BF]'>Essential</div>
+                    <div className='text-sm text-gray-600'>
+                      Perfect for personal and professional usage.
+                    </div>
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {plan === 'starter' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className='text-[#AA098F]'>
+                    Starter (Serverless)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='grid gap-2'>
                   <Row
-                    label='Average RCU'
-                    value={(inputs.vcpuAverage ?? 0) * inputs.rcuPerVcpu}
+                    label='Storage Price'
+                    value={result.starter.storagePriceUsd}
+                    money
                   />
-                )}
-                <Row
-                  label={
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className='border-b border-dashed border-gray-400 cursor-help'>
-                          Avg Consumed RCU
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        RCU used for final calculation based on QPS pattern.
-                      </TooltipContent>
-                    </Tooltip>
-                  }
-                  value={result.averaged.avgConsumedRcu}
-                />
-              </CardContent>
-            </Card>
+                  <Row
+                    label='Consumed RU (Million)'
+                    value={result.starter.consumedRuMillion}
+                  />
+                  <Row
+                    label='RU Price'
+                    value={result.starter.ruPriceUsd}
+                    money
+                  />
+                  <Row
+                    label='Total'
+                    value={result.starter.totalUsd}
+                    money
+                    highlight
+                  />
+                </CardContent>
+              </Card>
+            )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle className='text-[#AA098F]'>
-                  Starter (Serverless)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='grid gap-2'>
-                <Row
-                  label='Storage Price'
-                  value={result.starter.storagePriceUsd}
-                  money
-                />
-                <Row
-                  label='Consumed RU (Million)'
-                  value={result.starter.consumedRuMillion}
-                />
-                <Row label='RU Price' value={result.starter.ruPriceUsd} money />
-                <Row
-                  label='Total'
-                  value={result.starter.totalUsd}
-                  money
-                  highlight
-                />
-              </CardContent>
-            </Card>
+            {plan === 'essential' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className='text-[#4A40BF]'>Essential</CardTitle>
+                </CardHeader>
+                <CardContent className='grid gap-2'>
+                  <Row
+                    label='Storage Price'
+                    value={result.essential.storagePriceUsd}
+                    money
+                  />
+                  <Row
+                    label='Provisioned RCU'
+                    value={result.essential.provisionedRcu}
+                  />
+                  <Row
+                    label='Provisioned RCU Price'
+                    value={result.essential.provisionedRcuPriceUsd}
+                    money
+                  />
+                  <Row
+                    label='Total'
+                    value={result.essential.totalUsd}
+                    money
+                    highlight
+                  />
+                </CardContent>
+              </Card>
+            )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle className='text-[#4A40BF]'>Essential</CardTitle>
-              </CardHeader>
-              <CardContent className='grid gap-2'>
-                <Row
-                  label='Storage Price'
-                  value={result.essential.storagePriceUsd}
-                  money
-                />
-                <Row
-                  label='Provisioned RCU'
-                  value={result.essential.provisionedRcu}
-                />
-                <Row
-                  label='Provisioned RCU Price'
-                  value={result.essential.provisionedRcuPriceUsd}
-                  money
-                />
-                <Row
-                  label='Total'
-                  value={result.essential.totalUsd}
-                  money
-                  highlight
-                />
-              </CardContent>
-            </Card>
+            {/* Intermediate details below, foldable */}
+            <IntermediateAccordion
+              openByDefault={false}
+              content={
+                <>
+                  <Row
+                    label={
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className='border-b border-dashed border-gray-400 cursor-help'>
+                            Metering Storage Size (GB)
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Original size of data in a single replica.
+                        </TooltipContent>
+                      </Tooltip>
+                    }
+                    value={inputs.mysqlDataDirGB / 3 / inputs.compressionRatio}
+                  />
+                  {inputs.qpsPattern === 'sine' ? (
+                    <>
+                      <Row label='Peak RCU' value={inputs.vcpuPeak * inputs.rcuPerVcpu} />
+                      <Row
+                        label='Baseline RCU'
+                        value={inputs.vcpuBaseline * inputs.rcuPerVcpu}
+                      />
+                      <Row
+                        label='Amplitude'
+                        value={Math.max(
+                          0,
+                          (inputs.vcpuPeak - inputs.vcpuBaseline) * inputs.rcuPerVcpu
+                        )}
+                      />
+                    </>
+                  ) : (
+                    <Row
+                      label='Average RCU'
+                      value={(inputs.vcpuAverage ?? 0) * inputs.rcuPerVcpu}
+                    />
+                  )}
+                  <Row
+                    label={
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className='border-b border-dashed border-gray-400 cursor-help'>
+                            Avg Consumed RCU
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          RCU used for final calculation based on QPS pattern.
+                        </TooltipContent>
+                      </Tooltip>
+                    }
+                    value={result.averaged.avgConsumedRcu}
+                  />
+                </>
+              }
+            />
           </div>
         </div>
       </div>
@@ -585,6 +645,39 @@ function LoginForm() {
         {loading ? 'Signing in…' : 'Sign in'}
       </Button>
     </form>
+  )
+}
+
+function IntermediateAccordion({
+  openByDefault = false,
+  content,
+}: {
+  openByDefault?: boolean
+  content: React.ReactNode
+}) {
+  const [open, setOpen] = useState(!!openByDefault)
+  return (
+    <Card>
+      <CardHeader>
+        <button
+          type='button'
+          className='w-full flex items-center justify-between text-left'
+          onClick={() => setOpen(v => !v)}
+          aria-expanded={open}
+          aria-controls='intermediate-content'
+        >
+          <CardTitle>Intermediate</CardTitle>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </CardHeader>
+      {open && (
+        <CardContent id='intermediate-content' className='grid gap-2'>
+          {content}
+        </CardContent>
+      )}
+    </Card>
   )
 }
 

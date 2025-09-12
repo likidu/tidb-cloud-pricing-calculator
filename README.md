@@ -80,3 +80,4 @@ This repo includes a code-based Basic Auth using an Edge Function when Vercel Au
 ## Todos
 
 - [ ] Move more parameters into `config.ts`
+- [ ] Introduce a shared `Preferences` type in `src/lib/pricing/model.ts` (e.g., `{ migrationSource, regionKey, dualLayerEncryption, plan }`) and use it where we read/write `tidbcalc:prefs` so other components can consume preferences consistently.

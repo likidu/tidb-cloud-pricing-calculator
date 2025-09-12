@@ -1,6 +1,7 @@
 export type QpsPattern = 'sine' | 'flat'
 export type MigrationSource = 'mysql' | 'tidb71'
 export type RegionKey = string
+export type Plan = 'starter' | 'essential'
 
 export interface PricingInputs {
   migrationSource: MigrationSource
