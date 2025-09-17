@@ -1,23 +1,38 @@
 import type { PricingInputs, PricingResult } from './model'
-import { MIN_COMPRESSION_RATIO } from '../config'
+import {
+  DEFAULT_BASELINE_WORKLOAD_PCT,
+  DEFAULT_DUAL_LAYER_ENCRYPTION_ENABLED,
+  DEFAULT_MIGRATION_SOURCE,
+  DEFAULT_MILLION_RU_PRICE,
+  DEFAULT_MYSQL_DATA_DIR_GB,
+  DEFAULT_QPS_PATTERN,
+  DEFAULT_RCU_PRICE,
+  DEFAULT_CALCULATOR_REGION_KEY,
+  DEFAULT_STORAGE_PRICE_PER_GB_MONTH,
+  DEFAULT_VCPU_AVERAGE,
+  DEFAULT_VCPU_BASELINE,
+  DEFAULT_VCPU_PEAK,
+  MIN_COMPRESSION_RATIO,
+  RCU_PER_VCPU_DEFAULTS,
+} from '../config'
 
 // defaults chosen as reasonable placeholders; adjust in UI
 export const defaultInputs: PricingInputs = {
-  migrationSource: 'mysql',
-  qpsPattern: 'sine',
-  regionKey: 'aws-ap-southeast-1',
-  dualLayerEncryption: false,
-  mysqlDataDirGB: 500, // GB
+  migrationSource: DEFAULT_MIGRATION_SOURCE,
+  qpsPattern: DEFAULT_QPS_PATTERN,
+  regionKey: DEFAULT_CALCULATOR_REGION_KEY,
+  dualLayerEncryption: DEFAULT_DUAL_LAYER_ENCRYPTION_ENABLED,
+  mysqlDataDirGB: DEFAULT_MYSQL_DATA_DIR_GB, // GB
   compressionRatio: 1, // MySQL (RDS) defaults to no compression
-  vcpuBaseline: 8,
-  vcpuPeak: 32,
-  vcpuAverage: 16,
-  rcuPerVcpu: 3000, // RCU per vCPU
-  baselineWorkloadPct: 0.75,
+  vcpuBaseline: DEFAULT_VCPU_BASELINE,
+  vcpuPeak: DEFAULT_VCPU_PEAK,
+  vcpuAverage: DEFAULT_VCPU_AVERAGE,
+  rcuPerVcpu: RCU_PER_VCPU_DEFAULTS.mysql,
+  baselineWorkloadPct: DEFAULT_BASELINE_WORKLOAD_PCT,
 
-  storagePricePerGBMonth: 0.24,
-  millionRuPrice: 0.12,
-  rcuPrice: 0.24,
+  storagePricePerGBMonth: DEFAULT_STORAGE_PRICE_PER_GB_MONTH,
+  millionRuPrice: DEFAULT_MILLION_RU_PRICE,
+  rcuPrice: DEFAULT_RCU_PRICE,
 }
 
 const SECONDS_PER_HOUR = 3600

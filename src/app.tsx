@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { Input } from './components/ui/input'
+import { Checkbox } from './components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -21,7 +22,7 @@ import { calculatePricing, defaultInputs, type PricingInputs } from './lib/prici
 import type { Plan } from './lib/pricing/model'
 import { REGIONS, derivePrices, formatRegionLabel } from './lib/pricing/regions'
 import { formatCurrency } from './lib/utils/format'
-import { MIN_COMPRESSION_RATIO } from './lib/config'
+import { MIN_COMPRESSION_RATIO, RCU_PER_VCPU_DEFAULTS } from './lib/config'
 import { ChevronDown } from 'lucide-react'
 
 function NumberInput({
@@ -92,6 +93,8 @@ export default function App() {
           } else if (base.migrationSource === 'tidb71') {
             base.compressionRatio = 0.4
           }
+          base.rcuPerVcpu =
+            RCU_PER_VCPU_DEFAULTS[base.migrationSource] ?? base.rcuPerVcpu
           const prices = derivePrices(base.regionKey, base.dualLayerEncryption)
           return { ...base, ...prices }
         }
@@ -101,6 +104,20 @@ export default function App() {
     }
     return defaultInputs
   })
+
+  const [isRcuCustom, setIsRcuCustom] = useState(() =>
+    inputs.rcuPerVcpu !== RCU_PER_VCPU_DEFAULTS[inputs.migrationSource]
+  )
+
+  const handleRcuCustomizeToggle = (next: boolean) => {
+    setIsRcuCustom(next)
+    if (!next) {
+      setInputs(s => ({
+        ...s,
+        rcuPerVcpu: RCU_PER_VCPU_DEFAULTS[s.migrationSource] ?? s.rcuPerVcpu,
+      }))
+    }
+  }
 
   const result = useMemo(() => calculatePricing(inputs), [inputs])
 
@@ -160,21 +177,25 @@ export default function App() {
               <CardContent className='grid gap-4'>
                 <Select
                   value={inputs.migrationSource}
-                  onValueChange={v =>
+                  onValueChange={v => {
+                    const nextSource = v as PricingInputs['migrationSource']
                     setInputs(s => ({
                       ...s,
-                      migrationSource: v as PricingInputs['migrationSource'],
+                      migrationSource: nextSource,
                       // Force compression ratio to 1 for MySQL (RDS).
                       // For TiDB 7.1+, set default to 0.4 when switching to it.
                       compressionRatio:
-                        (v as PricingInputs['migrationSource']) === 'mysql'
+                        nextSource === 'mysql'
                           ? 1
-                          : (s.migrationSource !== 'tidb71' &&
-                              (v as PricingInputs['migrationSource']) === 'tidb71')
+                          : s.migrationSource !== 'tidb71' && nextSource === 'tidb71'
                             ? 0.4
                             : s.compressionRatio,
+                      // Align default RCU per vCPU with migration source when not customized.
+                      rcuPerVcpu: isRcuCustom
+                        ? s.rcuPerVcpu
+                        : RCU_PER_VCPU_DEFAULTS[nextSource] ?? s.rcuPerVcpu,
                     }))
-                  }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder='Select migration source' />
@@ -301,25 +322,6 @@ export default function App() {
                     }
                   />
                 )}
-                <NumberInput
-                  label={
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className='border-b border-dashed border-gray-400 cursor-help'>
-                          RCU per vCPU
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        The faster the CPU or the higher the TPS, the higher
-                        this parameter is.
-                      </TooltipContent>
-                    </Tooltip>
-                  }
-                  value={inputs.rcuPerVcpu}
-                  min={0}
-                  step={1}
-                  onChange={v => setInputs(s => ({ ...s, rcuPerVcpu: v || 0 }))}
-                />
                 {inputs.qpsPattern === 'sine' && (
                   <NumberInput
                     label='Baseline workload percentage (0–1)'
@@ -334,6 +336,60 @@ export default function App() {
                     }
                   />
                 )}
+                <div className='flex flex-col gap-1'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <div className='text-sm text-gray-700'>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            id='rcu-per-vcpu-label'
+                            className='border-b border-dashed border-gray-400 cursor-help'
+                          >
+                            RCU per vCPU
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          The faster the CPU or the higher the TPS, the higher
+                          this parameter is.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <label
+                      htmlFor='rcu-customize'
+                      className='inline-flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none'
+                    >
+                      <Checkbox
+                        id='rcu-customize'
+                        checked={isRcuCustom}
+                        onCheckedChange={checked =>
+                          handleRcuCustomizeToggle(checked === true)
+                        }
+                      />
+                      <span>Customize value</span>
+                    </label>
+                  </div>
+                  <Input
+                    id='rcu-per-vcpu'
+                    type='number'
+                    value={
+                      Number.isFinite(inputs.rcuPerVcpu)
+                        ? inputs.rcuPerVcpu
+                        : ('' as unknown as number)
+                    }
+                    min={0}
+                    step={1}
+                    disabled={!isRcuCustom}
+                    readOnly={!isRcuCustom}
+                    aria-labelledby='rcu-per-vcpu-label'
+                    onChange={e => {
+                      const parsed = parseFloat(e.target.value)
+                      setInputs(s => ({
+                        ...s,
+                        rcuPerVcpu: Number.isFinite(parsed) ? parsed : 0,
+                      }))
+                    }}
+                  />
+                </div>
               </CardContent>
             </Card>
 
