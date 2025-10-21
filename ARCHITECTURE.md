@@ -25,7 +25,7 @@ In this spreadsheet calculator ![Migrate from MySQL](./docs/spreadsheet_migrate_
 
 #### Intermediate Parameters
 
-- Metering Storage Size(GB): `[Size of files under MySQL data directory] / 3 / [Compressed Size/Original Size]`
+- Metering Storage Size(GB): `[Size of files under MySQL data directory] / [Compressed Size/Original Size]`
 - Peak RCU: `[Peak vCPU used] * [RCU per vCPU]`
 - Baseline RCU: `[Baseline vCPU used] * [RCU per vCPU]`
 - Amplitude: `[Peak RCU] - [Baseline RCU]`

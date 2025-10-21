@@ -47,7 +47,7 @@ export function calculatePricing(input: PricingInputs): PricingResult {
       : clamp(input.compressionRatio, MIN_COMPRESSION_RATIO, 1)
   const baselinePct = clamp(input.baselineWorkloadPct, 0, 1)
 
-  const meteringStorageGB = safeMax(0, input.mysqlDataDirGB / 3 / compression)
+  const meteringStorageGB = safeMax(0, input.mysqlDataDirGB / compression)
 
   let avgConsumedRcu = 0
   if (input.qpsPattern === 'flat') {

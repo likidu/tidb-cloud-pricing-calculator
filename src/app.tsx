@@ -609,7 +609,7 @@ export default function App() {
                         </TooltipContent>
                       </Tooltip>
                     }
-                    value={inputs.mysqlDataDirGB / 3 / inputs.compressionRatio}
+                    value={inputs.mysqlDataDirGB / inputs.compressionRatio}
                   />
                   {inputs.qpsPattern === 'sine' ? (
                     <>
